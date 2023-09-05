@@ -1,0 +1,5 @@
+thoughts.txt
+venv/
+__pycache__/
+*.xml
+*.idea
