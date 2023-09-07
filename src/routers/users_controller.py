@@ -1,14 +1,14 @@
 from fastapi import APIRouter, HTTPException, status
-from models.user import *
 from redis_client.crud import get_user, set_user, get_all_users, delete_user, delete_all_users, ResponseError
 from schemas.user_schema import get_user_schema, get_users_schema
 from routers.jwt_auth_users import get_password_hash
+from models.users.user import *
 
 router_user = APIRouter()
 
 
-@router_user.post("/bulk", response_model=User, status_code=status.HTTP_201_CREATED)
-async def create_user_bulk(user: UserDB):
+@router_user.post("/users/bulk", response_model=User, status_code=status.HTTP_201_CREATED)
+async def create_user_bulk(user: UserCreation):
     if get_user(str(user.id)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already created")
     try:
@@ -20,35 +20,48 @@ async def create_user_bulk(user: UserDB):
                                                                                       f"the user may not have been "
                                                                                       f"created properly")
 
-    return User(**user_created)
+    return UserCreation(**user_created, plain_password=user.plain_password)
 
 
-@router_user.post("", response_model=UserCreationResponse, status_code=status.HTTP_201_CREATED)
+@router_user.post("/users", response_model=UserCreation, status_code=status.HTTP_201_CREATED)
 async def create_user(
         first_name: str,
         gender: Gender,
         roles: List[Role],
         password: str,
+        in_charge: List[str] = None,
+        managed_by: Optional[UUID] = None,
         user_id: Optional[UUID] = None,
         last_name: Optional[str] = None):
+    if in_charge is None:
+        in_charge = []
     if not user_id:
         user_id = uuid4()
     if get_user(str(user_id)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User already created")
 
     try:
-        user = User(id=user_id, first_name=first_name, last_name=last_name, gender=gender, roles=roles)
+        user = User(id=user_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    gender=gender,
+                    roles=roles,
+                    in_charge=in_charge,
+                    managed_by=managed_by)
         db_user = UserDB(**dict(user), hashed_password=get_password_hash(password))
         set_user(str(user.id), db_user.model_dump_json())
         user_created = get_user_schema(get_user(str(user.id)))
+    except ValueError as value_error:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"ERROR: {value_error}")
+
     except ResponseError as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ERROR: {error.args}, "
                                                                                       f"the user may not have been "
                                                                                       f"created properly")
-    return UserCreationResponse(**user_created, plain_password=password)
+    return UserCreation(**user_created, plain_password=password)
 
 
-@router_user.get(path="", response_model=List[User], status_code=status.HTTP_200_OK)
+@router_user.get(path="/users", response_model=List[User], status_code=status.HTTP_200_OK)
 async def get_all(total_number: Optional[int] = None):
     try:
         users = get_all_users(total_number)
@@ -60,7 +73,7 @@ async def get_all(total_number: Optional[int] = None):
     return get_users_schema(users)
 
 
-@router_user.get("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router_user.get("/users/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
 async def get(user_id: UUID):
     user_id = str(user_id)
     try:
@@ -73,13 +86,12 @@ async def get(user_id: UUID):
     return User(**get_user_schema(user))
 
 
-@router_user.put("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router_user.put("/users/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
 async def put(user_id: UUID,
               first_name: str,
               gender: Gender,
               roles: List[Role],
               last_name: str = None):
-
     user_id = str(user_id)
     try:
         user = get_user_schema(get_user(user_id))
@@ -104,7 +116,7 @@ async def put(user_id: UUID,
     return User(**dict(updated_user))
 
 
-@router_user.patch("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router_user.patch("/users/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
 async def patch(user_id: UUID,
                 first_name: str = None,
                 last_name: str = None,
@@ -137,7 +149,7 @@ async def patch(user_id: UUID,
     return User(**dict(updated_user))
 
 
-@router_user.delete("/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
+@router_user.delete("/users/{user_id}", response_model=User, status_code=status.HTTP_200_OK)
 async def delete(user_id: UUID):
     user_id = str(user_id)
     try:
@@ -153,7 +165,7 @@ async def delete(user_id: UUID):
     return User(**user)
 
 
-@router_user.delete("", status_code=status.HTTP_204_NO_CONTENT)
+@router_user.delete("/users", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_all():
     try:
         delete_all_users()

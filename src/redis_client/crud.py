@@ -21,7 +21,6 @@ def get_user(key: str):
         if not user:
             logging.warning(f"User with id= {key} not found")
             return None
-        logging.debug(user)
         return json.loads(user)
     except ResponseError as error:
         logging.error(error.args)
