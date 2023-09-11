@@ -27,7 +27,7 @@ def get_user(key: str):
         raise error
 
 
-def get_all_users(total_number: Optional[int]):
+def get_all_users_db(total_number: Optional[int]):
     try:
         keys = redis_client.keys()[:total_number + 1] if total_number else redis_client.keys()
         users = [json.loads(redis_client.get(name=key)) for key in keys]

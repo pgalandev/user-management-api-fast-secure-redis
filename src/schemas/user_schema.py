@@ -18,5 +18,5 @@ def get_user_schema(user) -> dict:
     }
 
 
-def get_users_schema(users) -> List[User]:
-    return [User(**get_user_schema(user)) for user in users]
+def get_users_schema(users, _type: type) -> List[type]:
+    return [type(**get_user_schema(user)) for user in users]

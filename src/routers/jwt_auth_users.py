@@ -49,6 +49,15 @@ async def current_user(user: User = Depends(auth_user)):
     return user
 
 
+async def role_current_user(user: User = Depends(current_user)):
+    if Role.admin not in user.roles:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid privileges, admin role is required"
+        )
+    return user
+
+
 @router_jwt.post("/oauth2/login", description="Username reference to the user id", tags=["oauth2"])
 async def login(form: OAuth2PasswordRequestForm = Depends()):
     if not get_user(form.username):
