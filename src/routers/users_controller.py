@@ -39,7 +39,7 @@ async def create_user(
 
 @router_user.get(path="/users", response_model=List[UserResponse], status_code=status.HTTP_200_OK)
 async def get_all(total_number: Optional[int] = None):
-    return await users_service.get_all_users_db(total_number)
+    return await users_service.get_all_users(total_number)
 
 
 @router_user.get("/users/{user_id}", response_model=User, status_code=status.HTTP_200_OK)

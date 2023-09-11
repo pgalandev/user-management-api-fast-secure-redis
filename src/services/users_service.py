@@ -64,7 +64,7 @@ async def get_all_users(total_number: Optional[int]) -> List[object]:
         users = get_all_users_db(total_number)
         if not users:
             return list()
-    except Exception as error:
+    except ResponseError as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ERROR: {error.args}")
 
     return get_users_schema(users, UserResponse)
@@ -94,10 +94,9 @@ async def update_user(user_id: UUID,
                               activated_at=outdated_user.activated_at,
                               updated_at=time_ns(),
                               hashed_password=outdated_user.hashed_password)
-
-        # TODO update checkers
-
-        # Update
+        # Managers update
+        __user_update_managed_by_check(outdated_user, updated_user)
+        # User update
         set_user(user_id, updated_user.model_dump_json())
 
     except ValueError as validation_error:
@@ -111,5 +110,14 @@ async def update_user(user_id: UUID,
     return get_user_schema(get_user(user_id))
 
 
-def __user_update_check(outdated_user: User, updated_user: User):
-    pass
+def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> None:
+    # Updating the managers 'in_charge' list
+    if outdated_user.managed_by != updated_user:
+        if outdated_user.managed_by:
+            outdated_manager = UserDB(**get_user_schema(get_user(str(outdated_user.managed_by))))
+            outdated_manager.in_charge.remove(outdated_user.id)
+            set_user(str(outdated_manager.id), outdated_manager.model_dump_json())
+        if updated_user.managed_by:
+            updated_manager = UserDB(**get_user_schema(get_user(str(updated_user.managed_by))))
+            updated_manager.in_charge.add(updated_manager.id)
+            set_user(str(updated_manager.id), updated_manager.model_dump_json())
