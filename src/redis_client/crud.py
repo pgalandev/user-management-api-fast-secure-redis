@@ -41,7 +41,7 @@ def get_all_users_db(total_number: Optional[int]):
         return users
 
 
-def delete_user(key: str):
+def delete_user_db(key: str):
     try:
         redis_client.delete(key)
         logging.info(f"User with id: {key} has been deleted at {time_ns()}")
@@ -52,7 +52,7 @@ def delete_user(key: str):
         return True
 
 
-def delete_all_users():
+def delete_all_users_db():
     try:
         keys = redis_client.keys()
         for key in keys:
