@@ -5,4 +5,4 @@ from typing import Union
 class ApiResponse(BaseModel):
     success: bool
     message: str
-    data: Union[UserResponse, List[UserResponse]]
+    data: Union[UserResponse, List[UserResponse]] = {}

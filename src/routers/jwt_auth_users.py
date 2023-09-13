@@ -2,10 +2,11 @@ from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from redis_client.crud import get_user
+from redis_client.crud import get_user, set_user
 from schemas.user_schema import get_user_schema
 from datetime import datetime, timedelta
 from models.users.user import *
+from models.responses.api_response import ApiResponse
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
@@ -77,6 +78,22 @@ async def login(form: OAuth2PasswordRequestForm = Depends()):
     return {"access_token": jwt.encode(access_token, key=SECRET_KEY, algorithm=ALGORITHM), "token_type": "bearer"}
 
 
-@router_jwt.get(path="/users/my-user/", response_model=User, tags=["users"])
+@router_jwt.get(path="/oauth2/my-user/", response_model=User, tags=["oauth2"])
 async def me(user: User = Depends(current_user)):
     return user
+
+
+@router_jwt.put(path="/oauth2/change_pwd/", status_code=status.HTTP_200_OK, tags=["oauth2"])
+async def change_pwd(user_id: UUID, new_password: str, confirm_new_password: str, user: User = Depends(current_user)):
+    if user.id == user_id or Depends(role_current_user):
+        user = UserDB(**get_user_schema(get_user(str(user_id))))
+        if confirm_new_password != new_password:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords might be equal")
+        if verify_password(new_password, user.hashed_password):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="New password might be different than "
+                                                                                "the older")
+
+        user.hashed_password = get_password_hash(new_password)
+        set_user(str(user_id), user.model_dump_json())
+
+        return ApiResponse(success=True, message="Password changed successfully")

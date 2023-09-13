@@ -165,8 +165,13 @@ async def process_patch_user(user_id: UUID,
 
 async def process_delete_user(user_id: UUID) -> dict:
     try:
-        user = await process_get_user(user_id)
-        delete_user_db(user['id'])
+        user = User(**await process_get_user(user_id))
+        if user.managed_by:
+            manager = User(**await process_get_user(user.managed_by))
+            manager.in_charge.remove(user_id)
+            set_user(str(manager.id), manager.model_dump_json())
+
+        delete_user_db(str(user.id))
 
     except ResponseError as error:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ERROR: {error.args}, the user "
@@ -174,7 +179,7 @@ async def process_delete_user(user_id: UUID) -> dict:
     except Exception:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"ERROR: The user "
                                                                                       f"may not have been deleted")
-    return user
+    return user.model_dump()
 
 
 async def process_delete_all_users() -> None:
