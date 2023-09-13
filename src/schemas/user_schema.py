@@ -1,4 +1,4 @@
-from models.user import User, List
+from models.users.user import User, List
 
 
 def get_user_schema(user) -> dict:
@@ -12,6 +12,8 @@ def get_user_schema(user) -> dict:
         "is_activated": user["is_activated"],
         "updated_at": user["updated_at"],
         "entity_type": user["entity_type"],
+        "in_charge": user["in_charge"],
+        "managed_by": user["managed_by"],
         "hashed_password": user["hashed_password"]
     }
 

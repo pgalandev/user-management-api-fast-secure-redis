@@ -21,14 +21,13 @@ def get_user(key: str):
         if not user:
             logging.warning(f"User with id= {key} not found")
             return None
-        logging.debug(user)
         return json.loads(user)
     except ResponseError as error:
         logging.error(error.args)
         raise error
 
 
-def get_all_users(total_number: Optional[int]):
+def get_all_users_db(total_number: Optional[int]):
     try:
         keys = redis_client.keys()[:total_number + 1] if total_number else redis_client.keys()
         users = [json.loads(redis_client.get(name=key)) for key in keys]
@@ -42,7 +41,7 @@ def get_all_users(total_number: Optional[int]):
         return users
 
 
-def delete_user(key: str):
+def delete_user_db(key: str):
     try:
         redis_client.delete(key)
         logging.info(f"User with id: {key} has been deleted at {time_ns()}")
@@ -53,7 +52,7 @@ def delete_user(key: str):
         return True
 
 
-def delete_all_users():
+def delete_all_users_db():
     try:
         keys = redis_client.keys()
         for key in keys:
