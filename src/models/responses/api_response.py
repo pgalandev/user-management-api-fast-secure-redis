@@ -1,4 +1,4 @@
-from models.users.user import *
+from src.models.users.user import *
 from typing import Union
 
 

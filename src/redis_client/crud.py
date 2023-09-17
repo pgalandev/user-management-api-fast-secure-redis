@@ -1,6 +1,6 @@
 import json
 from time import time_ns
-from conf import *
+from src.conf import *
 from .connection import redis_client
 from redis.exceptions import ResponseError
 from typing import Optional
