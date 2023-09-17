@@ -92,6 +92,7 @@ async def process_update_user(user_id: UUID,
                               first_name: str,
                               gender: Gender,
                               roles: List[Role],
+                              password: str,
                               in_charge: Optional[Set[UUID]],
                               managed_by: Optional[UUID],
                               last_name: Optional[str]) -> dict:
@@ -107,7 +108,7 @@ async def process_update_user(user_id: UUID,
                               managed_by=managed_by,
                               activated_at=outdated_user.activated_at,
                               updated_at=time_ns(),
-                              hashed_password=outdated_user.hashed_password)
+                              hashed_password=get_password_hash(password))
         # Managers update
         __user_update_managed_by_check(outdated_user, updated_user)
         # User update
@@ -133,11 +134,12 @@ async def process_patch_user(user_id: UUID,
                              last_name: Optional[str],
                              gender: Optional[Gender],
                              roles: Optional[List[Role]],
+                             password: Optional[str],
                              managed_by: Optional[UUID],
                              in_charge: Optional[Set[UUID]]) -> dict:
     try:
         user = await process_get_user(user_id)
-
+        logging.info(in_charge)
         outdated_user = UserDB(**user)
         updated_user = UserDB(id=user_id,
                               first_name=first_name if first_name else outdated_user.first_name,
@@ -145,11 +147,14 @@ async def process_patch_user(user_id: UUID,
                               gender=gender if gender else outdated_user.gender,
                               roles=roles if roles else outdated_user.roles,
                               managed_by=managed_by if managed_by else outdated_user.managed_by,
-                              in_charge=in_charge if in_charge else outdated_user.in_charge,
+                              in_charge=in_charge if in_charge is not None else outdated_user.in_charge,
                               activated_at=outdated_user.activated_at,
+                              hashed_password=get_password_hash(password) if password else outdated_user.hashed_password,
                               updated_at=time_ns())
         # Managers update
         __user_update_managed_by_check(outdated_user, updated_user)
+        # Update subordinates
+        __user_in_charge_check(updated_user)
         # Update
         set_user(str(user_id), updated_user.model_dump_json())
     except ValueError as validation_error:
@@ -198,6 +203,11 @@ async def process_delete_all_users() -> None:
                                                                                       f"deleted")
 
 
+async def process_get_managed_users(manager_id: UUID) -> List[UserResponse]:
+    manager = UserDB(**await process_get_user(manager_id))
+    return [UserResponse(**await process_get_user(user_id)) for user_id in manager.in_charge]
+
+
 def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> None:
     """
     This function checks the set 'in_charge' of the manager who supervises him/her/it
@@ -233,4 +243,6 @@ def __user_in_charge_check(manager: User) -> None:
             outdated_manager = UserDB(**get_user_schema(get_user(str(outdated_user.managed_by))))
             outdated_manager.in_charge.remove(outdated_user.id)
             set_user(str(outdated_manager.id), outdated_manager.model_dump_json())
-
+        elif outdated_user.managed_by is None:
+            updated_user = outdated_user.model_copy(update={'managed_by': manager.id})
+            set_user(str(user_id), updated_user.model_dump_json())

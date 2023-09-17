@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException, status, Depends
 from src.models.users.user import *
 from src.routers.jwt_auth_users import role_current_user
@@ -59,13 +61,14 @@ async def put(user_id: UUID,
               first_name: str,
               gender: Gender,
               roles: List[Role],
+              password: str,
               in_charge: Optional[List[UUID]] = None,
               managed_by: Optional[UUID] = None,
               last_name: Optional[str] = None) -> ApiResponse:
-    updated_user = await users_service.process_update_user(user_id=user_id, first_name=first_name, gender=gender,
-                                                           roles=roles,
+    updated_user = await users_service.process_update_user(user_id=user_id, first_name=first_name,
+                                                           gender=gender, roles=roles,
                                                            in_charge=in_charge, managed_by=managed_by,
-                                                           last_name=last_name)
+                                                           last_name=last_name, password=password)
 
     return ApiResponse(success=True,
                        message=f"User {user_id} updated",
@@ -77,9 +80,9 @@ async def put(user_id: UUID,
                  status_code=status.HTTP_200_OK, dependencies=[Depends(role_current_user)])
 async def put_bulk(user: UserDTO) -> ApiResponse:
     updated_user = await users_service.process_update_user(user_id=user.id, first_name=user.first_name,
-                                                           gender=user.gender,
-                                                           roles=user.roles, in_charge=user.in_charge,
-                                                           managed_by=user.managed_by, last_name=user.last_name)
+                                                           gender=user.gender, roles=user.roles,
+                                                           in_charge=user.in_charge, managed_by=user.managed_by,
+                                                           last_name=user.last_name, password=user.password)
 
     return ApiResponse(success=True,
                        message=f"User {user.id} updated",
@@ -87,19 +90,23 @@ async def put_bulk(user: UserDTO) -> ApiResponse:
 
 
 @router_user.patch(path="/users/{user_id}", response_model=ApiResponse,
-                   response_description="User patched successfully", status_code=status.HTTP_200_OK)
+                   response_description="User patched successfully", status_code=status.HTTP_200_OK,
+                   dependencies=[Depends(role_current_user)])
 async def patch_user(user_id: UUID,
                      first_name: Optional[str] = None,
                      last_name: Optional[str] = None,
                      gender: Optional[Gender] = None,
                      roles: Optional[List[Role]] = None,
+                     password: Optional[str] = None,
                      managed_by: Optional[UUID] = None,
                      in_charge: Optional[Set[UUID]] = None) -> ApiResponse:
-    if not first_name and not last_name and not gender and not roles and not managed_by and not in_charge:
+    if (not first_name and not last_name and not gender and not roles and
+            not managed_by and in_charge is None and not password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"No field modified")
 
-    patched_user = await users_service.process_patch_user(user_id, first_name, last_name,
-                                                          gender, roles, managed_by, in_charge)
+    patched_user = await users_service.process_patch_user(user_id=user_id, first_name=first_name, last_name=last_name,
+                                                          gender=gender, roles=roles, managed_by=managed_by,
+                                                          in_charge=in_charge,password=password)
     return ApiResponse(success=True,
                        message=f"User {user_id} patched",
                        data=UserResponse(**patched_user))
@@ -119,4 +126,21 @@ async def delete(user_id: UUID) -> ApiResponse:
                     response_description="All users deleted successfully", dependencies=[Depends(role_current_user)])
 async def delete_all() -> ApiResponse:
     await users_service.process_delete_all_users()
-    return ApiResponse(success=True, message="All users deleted successfully")
+    return ApiResponse(success=True, message="All users have been deleted successfully")
+
+
+@router_user.get(path="/users/{user_id}/managed_users", response_model=ApiResponse, status_code=status.HTTP_200_OK)
+async def get_managed_users(user_id: UUID):
+    subordinates = await users_service.process_get_managed_users(user_id)
+    if not subordinates:
+        return ApiResponse(
+            success=False,
+            message=f"No users managed by {user_id} found",
+            data=subordinates
+        )
+    logging.info(subordinates)
+    return ApiResponse(
+        success=True,
+        message="Data found",
+        data=subordinates
+    )
