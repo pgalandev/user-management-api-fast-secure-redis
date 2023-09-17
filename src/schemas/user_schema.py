@@ -1,4 +1,4 @@
-from models.users.user import User, List
+from src.models.users.user import User, List
 
 
 def get_user_schema(user) -> dict:

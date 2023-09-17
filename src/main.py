@@ -1,6 +1,11 @@
+"""
+Initiate fastapi app and its routers
+"""
+
+
 from fastapi import FastAPI, Depends
-from routers.users_controller import router_user
-from routers.jwt_auth_users import router_jwt, current_user
+from src.routers.users_controller import router_user
+from src.routers.jwt_auth_users import router_jwt, current_user
 
 API_VERSION = "/api/v1"
 

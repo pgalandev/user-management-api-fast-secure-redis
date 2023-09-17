@@ -1,8 +1,9 @@
-from redis_client.crud import set_user, get_user, ResponseError, get_all_users_db, delete_user_db, delete_all_users_db
-from models.users.user import *
-from schemas.user_schema import get_user_schema, get_users_schema
+from src.redis_client.crud import set_user, get_user, ResponseError, get_all_users_db, delete_user_db, \
+    delete_all_users_db
+from src.models.users.user import *
+from src.schemas.user_schema import get_user_schema, get_users_schema
 from fastapi import HTTPException, status
-from routers.jwt_auth_users import get_password_hash
+from src.routers.jwt_auth_users import get_password_hash
 
 
 async def process_create_user(first_name: str,
@@ -32,7 +33,7 @@ async def process_create_user(first_name: str,
             if not manager:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                     detail=f"Manager with id= {user.managed_by} does not exist")
-            elif Role.manager not in manager.roles and Role.admin not in manager.roles:
+            elif Role.manager not in manager.roles or Role.admin not in manager.roles:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                                     detail=f"Invalid manager with id= {user.managed_by} for user with id={user.id}")
             else:
@@ -41,7 +42,9 @@ async def process_create_user(first_name: str,
                 # Updating users set managed by the manager
                 manager.in_charge.add(user.id)
                 set_user(str(manager.id), manager.model_dump_json())
-
+        elif user.in_charge:
+            set_user(str(user.id), user.model_dump_json())
+            __user_in_charge_check(user)
         else:
             # Creating the new user not managed
             set_user(str(user.id), user.model_dump_json())
@@ -196,7 +199,12 @@ async def process_delete_all_users() -> None:
 
 
 def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> None:
-    # Updating managers 'in_charge' list
+    """
+    This function checks the set 'in_charge' of the manager who supervises him/her/it
+        :param User outdated_user: The user previous the update
+        :param User updated_user: The user post the update
+    """
+
     if outdated_user.managed_by != updated_user.managed_by:
         if outdated_user.managed_by:
             outdated_manager = UserDB(**get_user_schema(get_user(str(outdated_user.managed_by))))
@@ -206,3 +214,23 @@ def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> N
             updated_manager = UserDB(**get_user_schema(get_user(str(updated_user.managed_by))))
             updated_manager.in_charge.add(updated_manager.id)
             set_user(str(updated_manager.id), updated_manager.model_dump_json())
+
+
+def __user_in_charge_check(manager: User) -> None:
+    """
+    This function loops over manager's in_charge list changing each managed_by field for the manager's parameter id
+    :param User manager:
+    :return : None
+    """
+    for user_id in manager.in_charge:
+        # Updating the new manager for each user in the list
+        outdated_user = UserDB(**get_user_schema(get_user(str(user_id))))
+
+        if outdated_user.managed_by and outdated_user.managed_by != manager.id:
+            updated_user = outdated_user.model_copy(update={'managed_by': manager.id})
+            set_user(str(user_id), updated_user.model_dump_json())
+            # Updating in_charge set from the old manager
+            outdated_manager = UserDB(**get_user_schema(get_user(str(outdated_user.managed_by))))
+            outdated_manager.in_charge.remove(outdated_user.id)
+            set_user(str(outdated_manager.id), outdated_manager.model_dump_json())
+

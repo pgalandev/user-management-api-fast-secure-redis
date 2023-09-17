@@ -2,11 +2,11 @@ from fastapi import Depends, HTTPException, status, APIRouter
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from redis_client.crud import get_user, set_user
-from schemas.user_schema import get_user_schema
+from src.redis_client.crud import get_user, set_user
+from src.schemas.user_schema import get_user_schema
 from datetime import datetime, timedelta
-from models.users.user import *
-from models.responses.api_response import ApiResponse
+from src.models.users.user import *
+from src.models.responses.api_response import ApiResponse
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30

@@ -2,7 +2,7 @@ from redis import Redis
 from redis.exceptions import ConnectionError
 from os import getenv
 
-from conf import *
+from src.conf import *
 import time
 
 times = 0
@@ -23,12 +23,12 @@ while times <= 3:
             logging.info("CONNECTION COMPLETED")
             break
 
-        logging.warning("UNEXPECTED RESPONSE", db_response)
+        logging.warning(f"UNEXPECTED RESPONSE: {db_response}")
 
     except ConnectionError as e:
-        logging.error("CONNECTION REFUSED: ", e.args)
+        logging.error(f"CONNECTION REFUSED: {e.args}")
     except Exception as e:
-        logging.error("ERROR OCCURRED: ", e.args)
+        logging.error(f"ERROR OCCURRED: {e.args}")
     finally:
         times += 1
         time.sleep(1)
