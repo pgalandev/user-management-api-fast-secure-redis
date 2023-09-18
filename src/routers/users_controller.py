@@ -1,5 +1,3 @@
-import logging
-
 from fastapi import APIRouter, HTTPException, status, Depends
 from src.models.users.user import *
 from src.routers.jwt_auth_users import role_current_user
@@ -106,7 +104,7 @@ async def patch_user(user_id: UUID,
 
     patched_user = await users_service.process_patch_user(user_id=user_id, first_name=first_name, last_name=last_name,
                                                           gender=gender, roles=roles, managed_by=managed_by,
-                                                          in_charge=in_charge,password=password)
+                                                          in_charge=in_charge, password=password)
     return ApiResponse(success=True,
                        message=f"User {user_id} patched",
                        data=UserResponse(**patched_user))
@@ -129,18 +127,55 @@ async def delete_all() -> ApiResponse:
     return ApiResponse(success=True, message="All users have been deleted successfully")
 
 
-@router_user.get(path="/users/{user_id}/managed_users", response_model=ApiResponse, status_code=status.HTTP_200_OK)
+@router_user.get(path="/users/{user_id}/managed_users", description="Retrieve all subordinates by a manager",
+                 response_model=ApiResponse, status_code=status.HTTP_200_OK)
 async def get_managed_users(user_id: UUID):
     subordinates = await users_service.process_get_managed_users(user_id)
     if not subordinates:
         return ApiResponse(
             success=False,
             message=f"No users managed by {user_id} found",
-            data=subordinates
+            data={
+                "subordinates_count": len(subordinates),
+                "data": subordinates
+            }
         )
     logging.info(subordinates)
     return ApiResponse(
         success=True,
         message="Data found",
-        data=subordinates
+        data={
+            "subordinates_count": len(subordinates),
+            "data": subordinates
+        }
+    )
+
+
+@router_user.post(path="/users/{user_id}/managed_users", status_code=status.HTTP_201_CREATED,
+                  response_model=ApiResponse, description="Add a subordinate to the manager's in_charge set",
+                  response_description="Subordinate added successfully", dependencies=[Depends(role_current_user)])
+async def post_subordinates(user_id: UUID, subordinate_id: UUID) -> ApiResponse:
+    subordinates = await users_service.process_add_subordinate(manager_id=user_id, subordinate_id=subordinate_id)
+    return ApiResponse(
+        success=True,
+        message=f"Subordinate {subordinate_id} added to manager's ({user_id}) in_charge set successfully",
+        data={
+            "subordinates_count": len(subordinates),
+            "data": subordinates
+        }
+    )
+
+
+@router_user.delete(path="/users/{user_id}/managed_users/{subordinate_id}", status_code=status.HTTP_201_CREATED,
+                    response_model=ApiResponse, description="Delete a subordinate from the manager's in_charge set",
+                    response_description="Subordinate deleted successfully", dependencies=[Depends(role_current_user)])
+async def delete_subordinate(user_id: UUID, subordinate_id: UUID) -> ApiResponse:
+    subordinates = await users_service.process_delete_subordinate(manager_id=user_id, subordinate_id=subordinate_id)
+    return ApiResponse(
+        success=True,
+        message=f"Subordinate {subordinate_id} deleted from manager's ({user_id}) in_charge set successfully",
+        data={
+            "subordinates_count": len(subordinates),
+            "data": subordinates
+        }
     )

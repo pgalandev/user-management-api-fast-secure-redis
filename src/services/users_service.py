@@ -149,7 +149,8 @@ async def process_patch_user(user_id: UUID,
                               managed_by=managed_by if managed_by else outdated_user.managed_by,
                               in_charge=in_charge if in_charge is not None else outdated_user.in_charge,
                               activated_at=outdated_user.activated_at,
-                              hashed_password=get_password_hash(password) if password else outdated_user.hashed_password,
+                              hashed_password=get_password_hash(
+                                  password) if password else outdated_user.hashed_password,
                               updated_at=time_ns())
         # Managers update
         __user_update_managed_by_check(outdated_user, updated_user)
@@ -206,6 +207,36 @@ async def process_delete_all_users() -> None:
 async def process_get_managed_users(manager_id: UUID) -> List[UserResponse]:
     manager = UserDB(**await process_get_user(manager_id))
     return [UserResponse(**await process_get_user(user_id)) for user_id in manager.in_charge]
+
+
+async def process_add_subordinate(manager_id: UUID, subordinate_id: UUID) -> List[UserResponse]:
+    manager = UserDB(**await process_get_user(manager_id))
+    if Role.manager not in manager.roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User {manager_id} is not a manager")
+
+    manager.in_charge.add(subordinate_id)
+    __user_in_charge_check(manager)
+    set_user(str(manager_id), manager.model_dump_json())
+
+    return await process_get_managed_users(manager_id)
+
+
+async def process_delete_subordinate(manager_id: UUID, subordinate_id: UUID) -> List[UserResponse]:
+    manager = UserDB(**await process_get_user(manager_id))
+    if Role.manager not in manager.roles:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"User {manager_id} is not a manager")
+    if subordinate_id not in manager.in_charge:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=f"User {subordinate_id} is not managed by {manager_id}")
+    # Change user's managed_by
+    subordinate = UserDB(**await process_get_user(subordinate_id))
+    subordinate.managed_by = None
+    set_user(str(subordinate_id), subordinate.model_dump_json())
+    # Change manager's list
+    manager.in_charge.remove(subordinate_id)
+    set_user(str(manager_id), manager.model_dump_json())
+
+    return await process_get_managed_users(manager_id)
 
 
 def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> None:
