@@ -4,3 +4,5 @@ __pycache__/
 *.xml
 *.idea
 .pytest_cache/
+.venv
+my-venv
