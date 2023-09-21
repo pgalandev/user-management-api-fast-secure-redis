@@ -111,6 +111,8 @@ async def process_update_user(user_id: UUID,
                               hashed_password=get_password_hash(password))
         # Managers update
         __user_update_managed_by_check(outdated_user, updated_user)
+        # Update subordinates (Manager case)
+        __user_in_charge_check(updated_user)
         # User update
         set_user(str(user_id), updated_user.model_dump_json())
 
@@ -241,7 +243,7 @@ async def process_delete_subordinate(manager_id: UUID, subordinate_id: UUID) -> 
 
 def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> None:
     """
-    This function checks the set 'in_charge' of the manager who supervises him/her/it
+    Checks the set 'in_charge' of the manager who supervises him/her/it
         :param User outdated_user: The user previous the update
         :param User updated_user: The user post the update
     """
@@ -255,6 +257,14 @@ def __user_update_managed_by_check(outdated_user: User, updated_user: User) -> N
             updated_manager = UserDB(**get_user_schema(get_user(str(updated_user.managed_by))))
             updated_manager.in_charge.add(updated_manager.id)
             set_user(str(updated_manager.id), updated_manager.model_dump_json())
+
+    if outdated_user.in_charge != updated_user.in_charge:
+        # Extracting removed subordinates, changing managed_by of each subordinate
+        removed_subordinates = outdated_user.in_charge - updated_user.in_charge
+        for subordinate_id in removed_subordinates:
+            subordinate = UserDB(**get_user_schema(get_user(str(subordinate_id))))
+            subordinate.managed_by = None
+            set_user(str(subordinate.id), subordinate.model_dump_json())
 
 
 def __user_in_charge_check(manager: User) -> None:

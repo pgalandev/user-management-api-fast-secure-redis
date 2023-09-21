@@ -8,7 +8,7 @@ from typing import Optional
 
 def set_user(key: str, data: str):
     try:
-        redis_client.set(name=key, value=data)
+        redis_client.set(name=f"user:{key}", value=data)
         logging.info(f"User: {data} set at {time_ns()}")
     except ResponseError as error:
         logging.error(error.args)
@@ -17,7 +17,7 @@ def set_user(key: str, data: str):
 
 def get_user(key: str):
     try:
-        user = redis_client.get(name=key)
+        user = redis_client.get(name=f"user:{key}")
         if not user:
             logging.warning(f"User with id= {key} not found")
             return None
@@ -43,7 +43,7 @@ def get_all_users_db(total_number: Optional[int]):
 
 def delete_user_db(key: str):
     try:
-        redis_client.delete(key)
+        redis_client.delete(f"user:{key}")
         logging.info(f"User with id: {key} has been deleted at {time_ns()}")
     except ResponseError as error:
         logging.error(error.args)
