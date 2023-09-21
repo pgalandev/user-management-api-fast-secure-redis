@@ -1,8 +1,20 @@
 # User Management API with FastAPI, Redis and JWT
 
-![Swagger API](link_to_swagger_image)
+## Table of Contents
+
+- [Introduction](#introduction)
+  - [Features](#features)
+  - [Author](#author)
+- [Prerequisites](#prerequisites)
+  - [Docker Compose (Linux)](#docker-compose-linux)
+  - [Python 3.8](#python-38)
+- [How to Launch](#how-to-launch)
+- [Usage](#usage)
+- [Improvement Proposal](#improvement-proposal)
 
 ## Introduction
+
+![Swagger API](secure-fast.PNG)
 
 This is a secure and efficient REST API for user administration. From creating new users to managing subordinates of a manager, this API provides a comprehensive solution. It is designed to ensure the integrity and security of the data with an educational purpose in mind.
 
@@ -69,4 +81,9 @@ Then to access to all the functionality you must log in with the mentionated def
 * **username**: `404bdab1-3dd5-4173-9713-43ec7858b0b5`
 * **password**: `test`
 
-![LogIn](link_to_login_image)
+![LogIn](login.PNG "Login image")
+
+## Improvement proposal
+
+* Atomize the user types, having classes for each type, user, manager and administrator. Eliminating the roles field.
+* Creating integration tests
