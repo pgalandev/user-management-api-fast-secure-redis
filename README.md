@@ -35,9 +35,9 @@ To be able to use all the functions provided by this API you will have to authen
 
 ### Author
 
-- **Author:** Pablo Galán Acedo
+- **Author:** [Pablo Galán Acedo](https://github.com/pgalandev)
 - **LinkedIn:** [Pablo Galán Acedo - LinkedIn](https://www.linkedin.com/in/pablo-gal%C3%A1n-acedo-64b400238/)
-- **GitHub:** [GitHub Repository](link_to_github_repository)
+- **GitHub:** [GitHub Repository](https://github.com/pgalandev/user-management-api-fast-secure-redis)
 
 ## Prerequisites
 
