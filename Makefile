@@ -9,9 +9,17 @@ build:
 	@echo "Building docker image..."
 	@docker build -t my-redis .
 
+
 db-up:
 	@echo "Starting redis server..."
-	@docker run -d -p 6379:6379 --name my-redis-container my-redis
+	if docker ps -a | grep -q my-redis-container; then \
+		echo "my-redis-container exists"; \
+		docker start my-redis-container; \
+	else \
+		echo "my-redis-container does not exist"; \
+		docker run -d -p 6379:6379 --name my-redis-container my-redis; \
+	fi
+
 
 add-admin: db-up
 	@docker exec my-redis-container sh /usr/local/bin/init-redis.sh
@@ -34,11 +42,11 @@ endif
 test:
 	@$(VENV_ACT) && pytest
 
-server-up:
+server-up: db-up
 	@$(VENV_ACT) && uvicorn src.main:app --reload --env-file=.env
 
 
 default-setup: build db-up add-admin install-requirements test server-up
-setup: build db-up install-requirements test server-up
+setup: db-up install-requirements test server-up
 
 .PHONY: build db-up down install-requirements server-up add-admin test setup default-setup
