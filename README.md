@@ -9,6 +9,8 @@
   - [Docker Compose (Linux)](#docker-compose-linux)
   - [Python 3.8](#python-38)
 - [How to Launch](#how-to-launch)
+  - [First launch](#first-launch)
+  - [Standard setup](#standard-setup)
 - [Usage](#usage)
 - [Improvement Proposal](#improvement-proposal)
 
@@ -43,19 +45,10 @@ To be able to use all the functions provided by this API you will have to authen
 
 Before you can run this project, make sure you have the following prerequisites installed on your system:
 
-- [Docker Compose](https://docs.docker.com/compose/install/)
+- [Docker](https://docs.docker.com/engine/install/)
 - `make` (Linux command)
 - Python 3.8
 
-### Docker Compose (Linux)
-
-If you're using Linux, you can install Docker Compose using the following commands:
-
-```bash
-# Install Docker Compose
-sudo apt update
-sudo apt install docker-compose
-```
 ### Python 3.8
 
 Make sure you have Python 3.8 installed on your system. You can download it from the [official Python website](https://www.python.org/downloads/release/python-380/)
@@ -64,6 +57,8 @@ Make sure you have Python 3.8 installed on your system. You can download it from
 
 To set up and run this project, follow these steps:
 
+### First launch
+
 * Clone the repository
 ```bash
 git clone link_to_github_repository
@@ -71,8 +66,17 @@ cd user-management-api-fast-secure-redis
 ```
 * Run the setup command using `make`:
 ```bash
+make default-setup
+```
+
+### Standard setup
+Once you have made the first launch and **there is a container** for the database, 
+you will only have to launch the following `make` each time you want to activate the service and preserve the data on your database:
+```bash
 make setup
 ```
+
+
 ## Usage
 
 Once the API is up and running, you can access it using the provided Swagger interface. Visit the [Swagger API documentation](http://localhost:8000/docs#/) (`http://localhost:8000/docs#/`) page to explore and interact with the endpoints.
