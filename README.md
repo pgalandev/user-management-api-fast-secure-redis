@@ -1,4 +1,4 @@
-# User Management API with FastAPI, Redis and JWT
+# User Management RESTful API with FastAPI, Redis and JWT
 
 ## Table of Contents
 
